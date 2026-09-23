@@ -1,0 +1,37 @@
+========================================
+
+TEAMS MEETING NOTES 2026-09-17
+
+https://www.kaggle.com/datasets/saurabhshahane/predict-ovarian-cancer
+
+https://www.sciencedirect.com/science/article/pii/S1040842826000132
+
+IDEAS
+
+-We agreed on the general idea of "blood sample classification using machine learning"
+-We need to narrow that down, to find a new problem/approach niche to address
+-Presentation of our conclusion/impact will be important; ex. "likelihood of coronary in [age range]" etc.
+-One advantage of classifiers is that they make cool 3D graphs for reports
+-Good possible areas: cancer and hormonal disorders; niche blood type -> model -> compare to existing research
+-One thing that's super relevant with medical classifiers: false/true positives/negatives
+
+SCHEDULING
+
+-Over the weekend, we can think about the idea/problem definition and do a little research (we'll need some citations for the proposal)
+-Then we need to grind out the one-page proposal (see instructions in Files tab) before Wednesday
+-Then we can run it past the TA on Wednesday, make final edits, submit Wednesday evening
+
+========================================
+
+TEAMS MEETING NOTES 2026-09-22
+
+IDEAS
+
+-Nested cross-validation; multiple passes, averages
+-Distribution of scores instead of one number; confidence intervals
+-Optimizing for minimal false positives, not highest accuracy
+	-Least-bad worst case, not best best-case
+-Bayesian reasoning
+
+========================================
+
