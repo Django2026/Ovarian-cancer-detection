@@ -1,0 +1,14 @@
+# core ML requirements
+numpy>=1.26.0,<2.0.0
+pandas>=2.2.0
+scipy>=1.12.0
+scikit-learn>=1.4.0
+
+# evaluation, visualization
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# utilities
+kaggle>=1.6.0
+joblib>=1.3.0
+openpyxl>=3.1.2

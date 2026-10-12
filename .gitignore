@@ -216,3 +216,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Data & Models
+!data/README.md
+!data/raw/
+!data/raw/*.xlsx
+data/processed/*
+!data/processed/.gitkeep
+
+output/*
+!output/.gitkeep
+
+evaluation/results/*
+!evaluation/results/.gitkeep
+evaluation/reports/*
+!evaluation/reports/.gitkeep
+
+# IDE configs
+.vscode/
+.idea/
