@@ -15,20 +15,17 @@ Conda / Miniconda
 ## Installation Guide (Windows)
 ### Install Python 3.11
 https://www.python.org/downloads/
-### Install Miniconda
+### Install Miniconda (via PowerShell)
 winget install --id Anaconda.Miniconda3 -e
 conda --version
-- If conda not found: Start -> Anaconda Prompt -> conda init powershell
+- If conda not found: Start Menu -> Anaconda Prompt -> conda init powershell
 - You may then need to run this in PowerShell to allow: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-- Alternatively, work directly within Anaconda Prompt from this point forward
-### Clone and enter this repo
-git clone <repo-url>
-cd Ovarian-cancer-detection
-### Set up environment
+- **Alternatively**, work directly within Anaconda Prompt from this point forward
+### Set up environment (via PowerShell or Anaconda Prompt, from within repo)
 conda env create -f environment.yml
 conda activate ovarian-cancer-ml
 
-## Quick Start
+## Quick Start (from within environment; see above)
 ### Train and evaluate
 python main.py --mode all --model voting
 ### Train only
