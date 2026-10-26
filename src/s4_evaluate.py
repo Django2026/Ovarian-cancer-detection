@@ -143,3 +143,60 @@ def save_3d_pca_plot(
     fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
+
+
+def save_pr_curve_plot(y_true: np.ndarray, y_prob: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
+    """Generates and saves a precision-recall curve plot in evaluation/reports/."""
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    precision, recall, _ = precision_recall_curve(y_true, y_prob)
+    ap = average_precision_score(y_true, y_prob)
+    baseline = np.mean(y_true)  # prevalence: precision of a random classifier
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(recall, precision, color="darkorange", lw=2, label=f"PR (AP = {ap:.3f})")
+    plt.axhline(baseline, color="navy", lw=1.5, linestyle="--", label=f"Baseline ({baseline:.2f})")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("Recall (Sensitivity)")
+    plt.ylabel("Precision")
+    plt.title(f"Precision-Recall Curve ({model_name.upper()})")
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+
+    out_path = reports_dir / f"pr_curve_{model_name}.png"
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+    return out_path
+
+
+def save_model_comparison_plot(pipeline, X_test, y_true: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
+    """Saves ROC and PR curves comparing each ensemble member against the full ensemble."""
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    X_t = pipeline.named_steps["preprocessor"].transform(X_test)
+    ensemble = pipeline.named_steps["classifier"]
+
+    # Fitted members of the voting/stacking ensemble, plus the ensemble itself
+    models = dict(ensemble.named_estimators_)
+    models[f"{model_name} (ensemble)"] = ensemble
+
+    fig, (ax_roc, ax_pr) = plt.subplots(1, 2, figsize=(12, 5))
+    for name, clf in models.items():
+        prob = clf.predict_proba(X_t)[:, 1]
+        fpr, tpr, _ = roc_curve(y_true, prob)
+        prec, rec, _ = precision_recall_curve(y_true, prob)
+        is_ens = "ensemble" in name
+        style = dict(lw=3 if is_ens else 1.5, linestyle="-" if is_ens else "--")
+        ax_roc.plot(fpr, tpr, label=f"{name.upper()} (AUC = {roc_auc_score(y_true, prob):.3f})", **style)
+        ax_pr.plot(rec, prec, label=f"{name.upper()} (AP = {average_precision_score(y_true, prob):.3f})", **style)
+
+    ax_roc.plot([0, 1], [0, 1], color="gray", lw=1, linestyle=":")
+    ax_roc.set(xlabel="False Positive Rate", ylabel="True Positive Rate (Recall)", title="ROC: Members vs. Ensemble")
+    ax_pr.set(xlabel="Recall", ylabel="Precision", title="Precision-Recall: Members vs. Ensemble")
+    ax_roc.legend(loc="lower right")
+    ax_pr.legend(loc="lower left")
+    fig.tight_layout()
+
+    out_path = reports_dir / f"model_comparison_{model_name}.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    return out_path

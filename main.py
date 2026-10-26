@@ -23,6 +23,8 @@ from src.s4_evaluate import (
     save_confusion_matrix_plot,
     save_roc_curve_plot,
     save_3d_pca_plot,
+    save_pr_curve_plot,
+    save_model_comparison_plot,
 )
 
 GROUND_TRUTH_DIR = BASE_DIR / "evaluation" / "ground_truth"
@@ -137,6 +139,12 @@ def evaluate_model(model_name: str = "rf"):
     if y_prob is not None:
         roc_plot = save_roc_curve_plot(y_test, y_prob, model_name=model_name)
         print(f"      ROC Curve:        {roc_plot}")
+        pr_plot = save_pr_curve_plot(y_test, y_prob, model_name=model_name)
+        print(f"      PR Curve:         {pr_plot}")
+        
+        if model_name in ("voting", "stacking"):
+            cmp_plot = save_model_comparison_plot(pipeline, X_test, y_test, model_name=model_name)
+            print(f"      Model comparison: {cmp_plot}")
 
     print(f"\nArtifacts generated in:\n  - {results_file}\n  - {REPORTS_DIR}")
 
