@@ -3,6 +3,7 @@ from typing import Dict
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import (
     RandomForestClassifier,
+    HistGradientBoostingClassifier,
     VotingClassifier,
     StackingClassifier,
 )
@@ -19,7 +20,15 @@ def get_base_models(random_state: int = RANDOM_SEED) -> Dict[str, BaseEstimator]
             class_weight="balanced",
             random_state=random_state,
             n_jobs=-1,
-        )
+        ),
+        "hgb": HistGradientBoostingClassifier(
+            max_depth=4,
+            learning_rate=0.05,
+            max_iter=200,
+            l2_regularization=1.0,
+            class_weight="balanced",
+            random_state=random_state,
+        ),
     }
 
 

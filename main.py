@@ -22,6 +22,7 @@ from src.s4_evaluate import (
     evaluate_predictions,
     save_confusion_matrix_plot,
     save_roc_curve_plot,
+    save_3d_pca_plot,
 )
 
 GROUND_TRUTH_DIR = BASE_DIR / "evaluation" / "ground_truth"
@@ -105,6 +106,14 @@ def evaluate_model(model_name: str = "rf"):
 
     print("\n[2/3] Running inference...")
     y_pred = pipeline.predict(X_test)
+    X_test_transformed = pipeline.named_steps["preprocessor"].transform(X_test)
+    pca_plot = save_3d_pca_plot(
+        X_test_transformed,
+        y_test,
+        y_pred,
+        model_name=model_name,
+    )
+    print(f"      3D PCA plot:      {pca_plot}")
     y_prob = pipeline.predict_proba(X_test)[:, 1] if hasattr(pipeline, "predict_proba") else None
 
     metrics = evaluate_predictions(y_test, y_pred, y_prob)
@@ -195,7 +204,7 @@ def ensemble_optimization(results_dir: Path, model_names: list[str], weights: li
     if total_weight <= 0:
         raise ValueError("Total weight must be greater then 0")
     #normalize weights
-    normalized_weights = [w / total_weight for w in weight]
+    normalized_weights = [w / total_weight for w in weights]
     #sum weights of classifiers that pred true
     weighted_score = sum(w for pred, w in zip(predictions, normalized_weights) if pred)
     return weighted_score >= threshold
@@ -213,7 +222,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="rf",
-        choices=["voting", "stacking", "rf"],
+        choices=["voting", "stacking", "rf", "hgb"],
         help="Model or ensemble architecture.",
     )
     args = parser.parse_args()

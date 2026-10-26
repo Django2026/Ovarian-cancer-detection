@@ -11,6 +11,7 @@ from sklearn.metrics import (
     roc_curve,
     precision_recall_curve,
 )
+from sklearn.decomposition import PCA
 from src.config import COST_FN, COST_FP, REPORTS_DIR
 
 
@@ -92,4 +93,53 @@ def save_roc_curve_plot(y_true: np.ndarray, y_prob: np.ndarray, model_name: str,
     out_path = reports_dir / f"roc_curve_{model_name}.png"
     plt.savefig(out_path, dpi=300)
     plt.close()
+    return out_path
+
+
+def save_3d_pca_plot(
+    X_transformed: np.ndarray,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    model_name: str,
+    reports_dir: Path = REPORTS_DIR,
+) -> Path:
+    """Save a 3D PCA visualization of test samples, marking misclassifications."""
+    if X_transformed.shape[1] < 3:
+        raise ValueError("3D PCA requires at least three input features.")
+
+    components = PCA(n_components=3).fit_transform(X_transformed)
+
+    fig = plt.figure(figsize=(9, 7))
+    ax = fig.add_subplot(111, projection="3d")
+
+    for label, color, class_name in [
+        (0, "steelblue", "Benign"),
+        (1, "darkorange", "Cancer"),
+    ]:
+        for correct, marker, status in [
+            (True, "o", "Correct"),
+            (False, "X", "Misclassified"),
+        ]:
+            mask = (y_true == label) & ((y_pred == y_true) == correct)
+            ax.scatter(
+                components[mask, 0],
+                components[mask, 1],
+                components[mask, 2],
+                color=color,
+                marker=marker,
+                label=f"{class_name} - {status}",
+                s=55,
+            )
+
+    ax.set_xlabel("Principal Component 1")
+    ax.set_ylabel("Principal Component 2")
+    ax.set_zlabel("Principal Component 3")
+    ax.set_title(f"3D PCA of Test Samples ({model_name.upper()})")
+    ax.legend()
+    fig.tight_layout()
+
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    out_path = reports_dir / f"pca_3d_{model_name}.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
     return out_path
