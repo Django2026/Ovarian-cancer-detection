@@ -17,9 +17,10 @@ from src.config import (
 )
 from src.s1_load import load_raw_dataset
 from src.s2_preprocess import build_preprocessor
-from src.s3_ensemble import build_voting_ensemble, build_stacking_ensemble, get_base_models
+from src.s3_ensemble import build_voting_ensemble, build_stacking_ensemble, get_base_models, ensemble_optimization
 from src.s4_evaluate import (
     evaluate_predictions,
+    calculate_weights,
     save_confusion_matrix_plot,
     save_roc_curve_plot,
     save_3d_pca_plot,
@@ -119,6 +120,7 @@ def evaluate_model(model_name: str = "rf"):
     y_prob = pipeline.predict_proba(X_test)[:, 1] if hasattr(pipeline, "predict_proba") else None
 
     metrics = evaluate_predictions(y_test, y_pred, y_prob)
+    metrics["predictions"] = y_pred.tolist()
 
     print("\n" + "-" * 40)
     print(f"TEST METRICS ({model_name.upper()}):")
@@ -148,83 +150,14 @@ def evaluate_model(model_name: str = "rf"):
 
     print(f"\nArtifacts generated in:\n  - {results_file}\n  - {REPORTS_DIR}")
 
-"""
-This is based off of the training model function and how ground truth is set up
-Calculates weights for each model by comparing their saved JSON predictions 
-    against the ground truth y_test.csv.
-    
-    Args:
-        results_dir: Directory where eval_results_{model_name}.json files are stored.
-        ground_truth_dir: Directory where y_test.csv is saved.
-        model_names: List of model names (e.g., ["rf", "xgb", "lr"]).
-        prediction_key: Key inside the JSON metrics dict if predictions are nested.
-        
-    Returns:
-        A list of weights (accuracy scores) corresponding to each model.
-"""
-def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: list[str], prediction_key: str = "predictions") -> list[float]:
-    y_test_path = ground_truth_dir / "y_test.csv"
-    y_test_df = pd.read_csv(y_test_path)
-    true_labels = y_test_df.iloc[:, 0].tolist()
-    weights = []
-    for name in model_names:
-        results_file = results_dir / f"eval_results_{name}.json"
-        with open(results_file, 'r') as file:
-            data = json.load(file)
-        predictions = data.get(prediction_key, data) if isinstance(data, dict) else data
-        if len(predictions) != len(true_labels):
-            raise ValueError(f"Model '{name}' prediction count ({len(predictions)}) "f"does not match y_test count ({len(true_labels)}).")
-        correct_count = sum(p == t for p, t in zip(predictions, true_labels))
-        accuracy = correct_count / len(true_labels)
-        weights.append(max(0.0, accuracy))
-        return weights
-
-"""
-Loads individual model result JSON files, extracts their predictions, 
-and calculates the weighted ensemble decision.
-    Args:
-    results_dir: The directory (Path object) where results are stored.
-    model_names: List of model names corresponding to the files.
-    weights: List of numerical weights based on each model's past accuracy.
-    prediction_key: The dictionary key inside metrics where the boolean prediction is stored, change string to key used to store bool pred inside metrics dict     
-    threshold: The decision threshold (default is 0.5 for weighted majority).
-        
-    Returns:
-        The final boolean classification (True or False).
-"""
-def ensemble_optimization(results_dir: Path, model_names: list[str], weights: list[float], prediction_key: str = "prediction", threshold: float = .5 ) -> bool:
-    if len(model_names) != len(weights):
-        raise ValueError("Model names and weights must be equal")
-    
-    predictions = []
-    #Load result files
-    for name in model_names:
-        results_file = results_dir / f"eval_results_{name}.json"
-        with open(results_file, 'r') as file:
-            metrics = json.load(file)
-        #extract predictions fron metrics dict
-        pred = metrics.get(prediction_key)
-        if pred is None:
-            raise KeyError(f"Could not find key '{prediction_key}' in {results_file.name}")
-        predictions.append(pred)
-
-    total_weight = sum(weights)
-    if total_weight <= 0:
-        raise ValueError("Total weight must be greater then 0")
-    #normalize weights
-    normalized_weights = [w / total_weight for w in weights]
-    #sum weights of classifiers that pred true
-    weighted_score = sum(w for pred, w in zip(predictions, normalized_weights) if pred)
-    return weighted_score >= threshold
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ovarian Cancer Detection ML Pipeline")
     parser.add_argument(
         "--mode",
         type=str,
         default="all",
-        choices=["train", "evaluate", "all"],
-        help="Action to perform: 'train', 'evaluate', or 'all' (default)",
+        choices=["train", "evaluate", "ensemble","all"],
+        help="Action to perform: 'train', 'evaluate', 'ensemble',or 'all' (default)",
     )
     parser.add_argument(
         "--model",
@@ -239,3 +172,32 @@ if __name__ == "__main__":
         train_model(model_name=args.model)
     if args.mode in ("evaluate", "all"):
         evaluate_model(model_name=args.model)
+    
+    # add for optimization functions
+    if args.mode in ("ensemble", "all"):
+        print("=" * 60)
+        print("RUNNING CUSTOM WEIGHTED ENSEMBLE TEST")
+        print("=" * 60)
+        
+        # Specify the models you evaluated
+        target_models = ["rf", "hgb"] 
+        
+        print(f"\n[1/2] Calculating accuracy-based weights for: {target_models}...")
+        weights = calculate_weights(
+            results_dir=RESULTS_DIR,
+            ground_truth_dir=GROUND_TRUTH_DIR,
+            model_names=target_models,
+            prediction_key="predictions"
+        )
+        for m_name, w in zip(target_models, weights):
+            print(f"      - Model '{m_name}' Weight: {w:.4f}")
+            
+        print(f"\n[2/2] Running ensemble optimization / decision...")
+        final_decision = ensemble_optimization(
+            results_dir=RESULTS_DIR,
+            model_names=target_models,
+            weights=weights,
+            prediction_key="predictions",
+            threshold=0.5
+        )
+        print(f"\n✨ Final Weighted Ensemble Decision: {final_decision}")

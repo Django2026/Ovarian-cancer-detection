@@ -1,7 +1,9 @@
 """Evaluation module for metrics, cost-sensitive scoring, and visualizations."""
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (
@@ -46,6 +48,37 @@ def evaluate_predictions(
         results["PR-AUC"] = float(average_precision_score(y_true, y_prob))
 
     return results
+
+"""
+This is based off of the training model function and how ground truth is set up
+Calculates weights for each model by comparing their saved JSON predictions 
+    against the ground truth y_test.csv.
+    
+    Args:
+        results_dir: Directory where eval_results_{model_name}.json files are stored.
+        ground_truth_dir: Directory where y_test.csv is saved.
+        model_names: List of model names (e.g., ["rf", "xgb", "lr"]).
+        prediction_key: Key inside the JSON metrics dict if predictions are nested.
+        
+    Returns:
+        A list of weights (accuracy scores) corresponding to each model.
+"""
+def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: list[str], prediction_key: str = "predictions") -> list[float]:
+    y_test_path = ground_truth_dir / "y_test.csv"
+    y_test_df = pd.read_csv(y_test_path)
+    true_labels = y_test_df.iloc[:, 0].tolist()
+    weights = []
+    for name in model_names:
+        results_file = results_dir / f"eval_results_{name}.json"
+        with open(results_file, 'r') as file:
+            data = json.load(file)
+        predictions = data.get(prediction_key, data) if isinstance(data, dict) else data
+        if len(predictions) != len(true_labels):
+            raise ValueError(f"Model '{name}' prediction count ({len(predictions)}) "f"does not match y_test count ({len(true_labels)}).")
+        correct_count = sum(p == t for p, t in zip(predictions, true_labels))
+        accuracy = correct_count / len(true_labels)
+        weights.append(max(0.0, accuracy))
+    return weights
 
 
 def save_confusion_matrix_plot(y_true: np.ndarray, y_pred: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
