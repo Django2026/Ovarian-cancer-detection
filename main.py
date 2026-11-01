@@ -162,25 +162,33 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model",
         type=str,
-        default="rf",
-        choices=["voting", "stacking", "rf", "hgb"],
+        default="all",
+        choices=["voting", "stacking", "rf", "hgb", "all"],
         help="Model or ensemble architecture.",
     )
     args = parser.parse_args()
 
+    target_models = ["rf", "hgb"]
+    if args.model == "all":
+        models_to_evaluate = target_models
+    else:
+        models_to_evaluate = [args.model]
+
     if args.mode in ("train", "all"):
-        train_model(model_name=args.model)
+        for m in models_to_evaluate:
+            if m not in ["voting", "stacking"]:
+                train_model(model_name=m)
+
     if args.mode in ("evaluate", "all"):
-        evaluate_model(model_name=args.model)
-    
+        for m in models_to_evaluate:
+            if m not in ["voting", "stacking"]:
+                evaluate_model(model_name=m)
+
     # add for optimization functions
     if args.mode in ("ensemble", "all"):
         print("=" * 60)
         print("RUNNING CUSTOM WEIGHTED ENSEMBLE TEST")
         print("=" * 60)
-        
-        # Specify the models you evaluated
-        target_models = ["rf", "hgb"] 
         
         print(f"\n[1/2] Calculating accuracy-based weights for: {target_models}...")
         weights = calculate_weights(
