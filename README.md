@@ -33,6 +33,9 @@ python main.py --mode train --model voting
 ### Evaluate only
 python main.py --mode evaluate --model voting
 
+### Shap testing 
+python main.py --mode explain --model rf 
+
 ## Results
 TODO
 

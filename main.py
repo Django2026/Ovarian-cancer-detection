@@ -28,6 +28,16 @@ from src.s4_evaluate import (
     save_model_comparison_plot,
 )
 
+#for shape remove if necessary
+from src.s5_shap import (
+    load_model_and_data,
+    load_train_data,
+    build_explainer,
+    compute_shap_values,
+    save_shap_plots,
+)
+
+
 GROUND_TRUTH_DIR = BASE_DIR / "evaluation" / "ground_truth"
 
 
@@ -150,14 +160,33 @@ def evaluate_model(model_name: str = "rf"):
 
     print(f"\nArtifacts generated in:\n  - {results_file}\n  - {REPORTS_DIR}")
 
+###############################################################################
+#for shap remove if necessary
+def explain_model(model_name: str = "rf"):
+
+    
+    print("=" * 60)
+    print(f"EXPLAIN PHASE (SHAP): {model_name.upper()}")
+    print("=" * 60)
+
+    pipeline, X_test = load_model_and_data(model_name)
+    X_train = load_train_data()
+    explainer = build_explainer(pipeline, X_train)
+    sv = compute_shap_values(explainer, X_test)
+
+    for p in save_shap_plots(sv, model_name):
+        print(f"  Saved: {p}")
+
+###############################################################################
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ovarian Cancer Detection ML Pipeline")
     parser.add_argument(
         "--mode",
         type=str,
         default="all",
-        choices=["train", "evaluate", "ensemble","all"],
-        help="Action to perform: 'train', 'evaluate', 'ensemble',or 'all' (default)",
+        choices=["train", "evaluate", "ensemble", "explain","all"],
+        #added explain to the choices for shap
+        help="Action to perform: 'train', 'evaluate', 'ensemble', 'explain', or 'all' (default)",
     )
     parser.add_argument(
         "--model",
@@ -201,3 +230,6 @@ if __name__ == "__main__":
             threshold=0.5
         )
         print(f"\n✨ Final Weighted Ensemble Decision: {final_decision}")
+
+    if args.mode in ("explain", "all"):
+        explain_model(model_name=args.model)
