@@ -83,13 +83,7 @@ def build_stacking_ensemble(random_state: int = RANDOM_SEED) -> BaseEstimator:
         n_jobs=-1,
     )
 
-def ensemble_optimization(
-    results_dir: Path,
-    model_names: list[str],
-    weights: list[float],
-    prediction_key: str = "prediction",
-    threshold: float = 0.5,
-) -> bool:
+def ensemble_optimization(results_dir: Path, model_names: list[str], weights: list[float], prediction_key: str = "prediction", threshold: float = 0.5,) -> bool:
     """Return the weighted majority decision from model result JSON files.
 
     Args:
@@ -101,7 +95,7 @@ def ensemble_optimization(
     """
     if len(model_names) != len(weights):
         raise ValueError("Model names and weights must be equal")
-
+    #load prediction list for all models
     predictions = []
     for name in model_names:
         results_file = results_dir / f"eval_results_{name}.json"
@@ -112,7 +106,7 @@ def ensemble_optimization(
         if pred is None:
             raise KeyError(f"Could not find key '{prediction_key}' in {results_file.name}")
         predictions.append(pred)
-
+    #normalize weights 
     total_weight = sum(weights)
     if total_weight <= 0:
         raise ValueError("Total weight must be greater than 0")

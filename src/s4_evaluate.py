@@ -68,6 +68,7 @@ def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: li
     y_test_df = pd.read_csv(y_test_path)
     true_labels = y_test_df.iloc[:, 0].tolist()
     weights = []
+    #calculate raw accuracy for each model and use that as the weight
     for name in model_names:
         results_file = results_dir / f"eval_results_{name}.json"
         with open(results_file, 'r') as file:
@@ -75,6 +76,7 @@ def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: li
         predictions = data.get(prediction_key, data) if isinstance(data, dict) else data
         if len(predictions) != len(true_labels):
             raise ValueError(f"Model '{name}' prediction count ({len(predictions)}) "f"does not match y_test count ({len(true_labels)}).")
+        #accuracy = correct predictions / total samples
         correct_count = sum(p == t for p, t in zip(predictions, true_labels))
         accuracy = correct_count / len(true_labels)
         weights.append(max(0.0, accuracy))
