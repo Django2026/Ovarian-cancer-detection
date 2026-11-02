@@ -192,12 +192,12 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="all",
-        choices=["voting", "stacking", "rf", "hgb", "all"],
+        choices=["voting", "stacking", "rf", "hgb", "lr", "svm", "all"],
         help="Model or ensemble architecture.",
     )
     args = parser.parse_args()
 
-    target_models = ["rf", "hgb"]
+    target_models = ["rf", "hgb", "lr", "svm"]
     if args.model == "all":
         models_to_evaluate = target_models
     else:

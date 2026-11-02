@@ -10,6 +10,7 @@ from sklearn.ensemble import (
     StackingClassifier,
 )
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from src.config import RANDOM_SEED
 
 def get_base_models(random_state: int = RANDOM_SEED) -> Dict[str, BaseEstimator]:
@@ -30,6 +31,20 @@ def get_base_models(random_state: int = RANDOM_SEED) -> Dict[str, BaseEstimator]
             class_weight="balanced",
             random_state=random_state,
         ),
+        "lr": LogisticRegression(
+            C=1.0,
+            class_weight="balanced",
+            max_iter=1000,
+            random_state=random_state,
+        ),
+        "svm": SVC(
+            kernel="rbf",
+            C=1.0,
+            gamma="scale",
+            probability=True,
+            class_weight="balanced",
+            random_state=random_state,
+        )
     }
 
 def build_voting_ensemble(
