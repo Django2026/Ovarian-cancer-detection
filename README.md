@@ -14,9 +14,9 @@ A patient whose model probability of cancer is 0.45 would be called benign with 
 default 0.5 cutoff. Our tuned Random Forest cutoff (about 0.39) flags her as cancer.
 
 ## Prerequisites
--Python 3.11
--Conda / Miniconda
--Without Conda you can run pip install -r requirements.txt instead
+- Python 3.11
+- Conda / Miniconda
+- Without Conda you can run: pip install -r requirements.txt
 
 ## Installation Guide (Windows)
 ### Install Python 3.11
