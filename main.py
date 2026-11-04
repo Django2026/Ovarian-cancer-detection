@@ -243,3 +243,6 @@ if __name__ == "__main__":
 
     if args.mode == "nested":
         run_nested_cv(models_to_evaluate)
+
+    if args.mode in ("explain", "all"):
+        explain_model(model_name=args.model)
