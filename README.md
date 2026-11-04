@@ -3,14 +3,20 @@
 ### Adam, Shaelynn, Rem, and Arunesh
 
 ## Intro
-TODO
+We classify ovarian cancer vs. benign tumours from 49 routine blood-test values
+(349 patients; Mi et al., 2020). Existing studies use a fixed 0.5 cutoff and may tune
+settings on test data. Our method uses nested cross-validation and picks each model's
+cutoff so that at least 90% of cancers are caught with the fewest false alarms.
+We compare Logistic Regression, an RBF SVM, Random Forest and Gradient Boosting.
 
 ## Illustrative Sample
-TODO
+A patient whose model probability of cancer is 0.45 would be called benign with the
+default 0.5 cutoff. Our tuned Random Forest cutoff (about 0.39) flags her as cancer.
 
 ## Prerequisites
-Python 3.11
-Conda / Miniconda
+-Python 3.11
+-Conda / Miniconda
+-Without Conda you can run pip install -r requirements.txt instead
 
 ## Installation Guide (Windows)
 ### Install Python 3.11
@@ -26,6 +32,8 @@ conda env create -f environment.yml
 conda activate ovarian-cancer-ml
 
 ## Quick Start (from within environment; see above)
+### Run everything
+python quickstart.py
 ### Train and evaluate
 python main.py --mode all --model voting
 ### Train only
@@ -36,8 +44,18 @@ python main.py --mode evaluate --model voting
 ### Shap testing 
 python main.py --mode explain --model rf 
 
+### Nested cross-validation (proposed method)
+python main.py --mode nested --model all
+
 ## Results
-TODO
+Nested 5-fold cross-validation, recall floor 90% (mean over folds):
+
+| Model | Cutoff | Recall | False-positive rate | ROC-AUC |
+|---|---|---|---|---|
+| Random Forest | 0.39 | 0.92 | 0.20 | 0.95 |
+| Gradient Boosting | 0.26 | 0.90 | 0.19 | 0.95 |
+| SVM (RBF) | 0.24 | 0.89 | 0.41 | 0.88 |
+| Logistic Regression | 0.20 | 0.88 | 0.42 | 0.87 |
 
 ## Citation
 Mi, W., et al. (2020). Data for: Using Machine Learning to Predict Ovarian Cancer. Mendeley Data, V11, doi:10.17632/th7fztbrv9.11.
