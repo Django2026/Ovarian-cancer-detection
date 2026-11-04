@@ -37,6 +37,8 @@ from src.s5_shap import (
     save_shap_plots,
 )
 
+from src.s6_nested_cv import run_all as run_nested_cv
+
 
 GROUND_TRUTH_DIR = BASE_DIR / "evaluation" / "ground_truth"
 
@@ -184,7 +186,7 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="all",
-        choices=["train", "evaluate", "ensemble", "explain","all"],
+        choices=["train", "evaluate", "ensemble", "explain","nested", "all"],
         #added explain to the choices for shap
         help="Action to perform: 'train', 'evaluate', 'ensemble', 'explain', or 'all' (default)",
     )
@@ -239,5 +241,5 @@ if __name__ == "__main__":
         )
         print(f"\n✨ Final Weighted Ensemble Decision: {final_decision}")
 
-    if args.mode in ("explain", "all"):
-        explain_model(model_name=args.model)
+    if args.mode == "nested":
+        run_nested_cv(models_to_evaluate)
