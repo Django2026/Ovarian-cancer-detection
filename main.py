@@ -245,4 +245,6 @@ if __name__ == "__main__":
         run_nested_cv(models_to_evaluate)
 
     if args.mode in ("explain", "all"):
-        explain_model(model_name=args.model)
+        for m in models_to_evaluate:
+            if m not in ["voting", "stacking"]:
+                explain_model(model_name=m)

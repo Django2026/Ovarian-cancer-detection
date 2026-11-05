@@ -10,6 +10,7 @@ steps = [
     ["--mode", "train", "--model", "all"],
     ["--mode", "evaluate", "--model", "all"],
     ["--mode", "nested", "--model", "all"],
+    ["--mode", "explain", "--model", "rf"],
 ]
 
 for args in steps:

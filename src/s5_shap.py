@@ -22,7 +22,7 @@ def load_model_and_data(model_name: str = "rf"):
 
 def make_predict_fn(pipeline, columns):
 
-    cancer_col = list(pipeline.classes_).index(0)   
+    cancer_col = list(pipeline.classes_).index(1)   
 
     def predict_cancer(X):
 
