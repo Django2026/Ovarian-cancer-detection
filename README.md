@@ -35,11 +35,11 @@ conda activate ovarian-cancer-ml
 ### Run everything
 python quickstart.py
 ### Train and evaluate
-python main.py --mode all --model voting
+python main.py --mode all --model rf
 ### Train only
-python main.py --mode train --model voting
+python main.py --mode train --model rf
 ### Evaluate only
-python main.py --mode evaluate --model voting
+python main.py --mode evaluate --model rf
 
 ### Shap testing 
 python main.py --mode explain --model rf 
