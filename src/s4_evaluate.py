@@ -1,4 +1,15 @@
-"""Evaluation module for metrics, cost-sensitive scoring, and visualizations."""
+"""Step 4 - Evaluation: scores and charts for a trained model.
+
+Input : true labels, predicted labels (0/1) and predicted cancer probabilities
+        for the 70 held-out test patients (single 80/20 split).
+Output: a dictionary of metrics (saved as JSON by main.py) and PNG charts in
+        evaluation/reports/: confusion matrix, ROC curve, precision-recall
+        curve and a 3D PCA view of the test patients.
+Called by: main.py (--mode evaluate and --mode ensemble).
+
+Note: these scores use the default 0.5 cutoff on one fixed split. The
+project's proposed method (tuned cutoff, nested CV) is in s6_nested_cv.py.
+"""
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -19,6 +30,8 @@ from src.config import COST_FN, COST_FP, REPORTS_DIR
 
 def compute_cost(y_true: np.ndarray, y_pred: np.ndarray, cost_fn: float = COST_FN, cost_fp: float = COST_FP) -> float:
     """Computes total clinical misclassification cost: (FN * cost_fn) + (FP * cost_fp)."""
+    # confusion_matrix(...).ravel() returns the four counts in this fixed order:
+    # true negatives, false positives, false negatives, true positives
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     return float(fn * cost_fn + fp * cost_fp)
 
@@ -28,9 +41,15 @@ def evaluate_predictions(
     y_pred: np.ndarray,
     y_prob: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
-    """Generates standard and cost-sensitive evaluation metrics."""
+    """Generates standard and cost-sensitive evaluation metrics.
+
+    y_pred are 0/1 labels; y_prob (optional) are cancer probabilities, needed
+    for the threshold-free scores ROC-AUC and PR-AUC.
+    """
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    # Sensitivity (recall): share of cancer patients that were caught
     sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    # Specificity: share of benign patients correctly cleared
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
     
     results = {
@@ -44,7 +63,10 @@ def evaluate_predictions(
     }
 
     if y_prob is not None:
+        # ROC-AUC: chance a random cancer patient gets a higher score than a
+        # random benign one (0.5 = guessing, 1.0 = perfect)
         results["ROC-AUC"] = float(roc_auc_score(y_true, y_prob))
+        # PR-AUC (average precision): summarises precision across all recall levels
         results["PR-AUC"] = float(average_precision_score(y_true, y_prob))
 
     return results
@@ -64,6 +86,9 @@ Calculates weights for each model by comparing their saved JSON predictions
         A list of weights (accuracy scores) corresponding to each model.
 """
 def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: list[str], prediction_key: str = "predictions") -> list[float]:
+    # Used only by the exploratory weighted vote (--mode ensemble).
+    # Note: these weights are computed on the TEST labels, so they should not be
+    # used to report an unbiased ensemble score (see ensemble_optimization in s3).
     y_test_path = ground_truth_dir / "y_test.csv"
     y_test_df = pd.read_csv(y_test_path)
     true_labels = y_test_df.iloc[:, 0].tolist()
@@ -84,7 +109,10 @@ def calculate_weights(results_dir: Path, ground_truth_dir: Path, model_names: li
 
 
 def save_confusion_matrix_plot(y_true: np.ndarray, y_pred: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
-    """Generates and saves a confusion matrix heatmap in evaluation/reports/."""
+    """Generates and saves a confusion matrix heatmap in evaluation/reports/.
+
+    Rows = true class, columns = predicted class; the diagonal is correct.
+    """
     reports_dir.mkdir(parents=True, exist_ok=True)
     cm = confusion_matrix(y_true, y_pred)
     
@@ -109,7 +137,11 @@ def save_confusion_matrix_plot(y_true: np.ndarray, y_pred: np.ndarray, model_nam
 
 
 def save_roc_curve_plot(y_true: np.ndarray, y_prob: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
-    """Generates and saves a ROC curve plot in evaluation/reports/."""
+    """Generates and saves a ROC curve plot in evaluation/reports/.
+
+    Each point is one possible cutoff: x = false-alarm rate, y = recall.
+    The dashed diagonal is a random classifier.
+    """
     reports_dir.mkdir(parents=True, exist_ok=True)
     fpr, tpr, _ = roc_curve(y_true, y_prob)
     auc_val = roc_auc_score(y_true, y_prob)
@@ -138,11 +170,17 @@ def save_3d_pca_plot(
     model_name: str,
     reports_dir: Path = REPORTS_DIR,
 ) -> Path:
-    """Save a 3D PCA visualization of test samples, marking misclassifications."""
+    """Save a 3D PCA visualization of test samples, marking misclassifications.
+
+    PCA squeezes the 49 features into 3 axes that keep as much variation as
+    possible, so the patients can be drawn in 3D. For illustration only.
+    """
     if X_transformed.shape[1] < 3:
         raise ValueError("3D PCA requires at least three input features.")
 
     components = PCA(n_components=3).fit_transform(X_transformed)
+
+    # One colour per true class; circles = correct, X = misclassified
 
     fig = plt.figure(figsize=(9, 7))
     ax = fig.add_subplot(111, projection="3d")
@@ -181,7 +219,11 @@ def save_3d_pca_plot(
 
 
 def save_pr_curve_plot(y_true: np.ndarray, y_prob: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
-    """Generates and saves a precision-recall curve plot in evaluation/reports/."""
+    """Generates and saves a precision-recall curve plot in evaluation/reports/.
+
+    Each point is one possible cutoff: x = recall, y = precision (share of
+    "cancer" predictions that were really cancer).
+    """
     reports_dir.mkdir(parents=True, exist_ok=True)
     precision, recall, _ = precision_recall_curve(y_true, y_prob)
     ap = average_precision_score(y_true, y_prob)
@@ -205,7 +247,10 @@ def save_pr_curve_plot(y_true: np.ndarray, y_prob: np.ndarray, model_name: str, 
 
 
 def save_model_comparison_plot(pipeline, X_test, y_true: np.ndarray, model_name: str, reports_dir: Path = REPORTS_DIR) -> Path:
-    """Saves ROC and PR curves comparing each ensemble member against the full ensemble."""
+    """Saves ROC and PR curves comparing each ensemble member against the full ensemble.
+
+    Only runs for "voting"/"stacking" models, which main.py currently skips.
+    """
     reports_dir.mkdir(parents=True, exist_ok=True)
     X_t = pipeline.named_steps["preprocessor"].transform(X_test)
     ensemble = pipeline.named_steps["classifier"]
