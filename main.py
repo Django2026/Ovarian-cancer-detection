@@ -1,4 +1,24 @@
-"""Single entrypoint script to train, evaluate, or run both."""
+"""Single entrypoint script to train, evaluate, or run both.
+
+main.py is the "conductor": it calls the steps in src/ in order.
+
+    src/s1_load.py        Step 1  load + clean the Excel data
+    src/s2_preprocess.py  Step 2  fill missing values + scale
+    src/s3_ensemble.py    Step 3  the four models (rf, hgb, lr, svm)
+    src/s4_evaluate.py    Step 4  metrics + charts
+    src/s5_shap.py        Step 5  SHAP explanations
+    src/s6_nested_cv.py   Step 6  proposed method: nested CV + tuned cutoff
+
+Usage:  python main.py --mode <mode> --model <model>
+  --mode train     train on an 80% split, save models to output/
+  --mode evaluate  test saved models on the 20% split (cutoff 0.5)
+  --mode ensemble  exploratory weighted vote (see notes in s3_ensemble.py)
+  --mode explain   SHAP charts for a trained model
+  --mode nested    the proposed method (s6_nested_cv.py)
+  --mode all       train + evaluate + ensemble + explain (not nested)
+  --model          rf | hgb | lr | svm | all
+Or run everything with:  python quickstart.py
+"""
 import argparse
 import json
 from pathlib import Path
@@ -40,11 +60,15 @@ from src.s5_shap import (
 from src.s6_nested_cv import run_all as run_nested_cv
 
 
+# Where the held-out test patients and their true labels are saved
 GROUND_TRUTH_DIR = BASE_DIR / "evaluation" / "ground_truth"
 
 
 def get_model(ensemble_type: str):
-    """Instantiates the specified model or ensemble."""
+    """Instantiates the specified model or ensemble.
+
+    Looks the name up in s3_ensemble.get_base_models(), e.g. "rf" -> Random Forest.
+    """
     if ensemble_type == "voting":
         return build_voting_ensemble(random_state=RANDOM_SEED)
     elif ensemble_type == "stacking":
@@ -70,7 +94,9 @@ def train_model(model_name: str = "rf", test_size: float = 0.2) -> Path:
     X, y = load_raw_dataset(file_name="data_raw_1.xlsx")
     print(f"      Total records: {X.shape[0]}, Features: {X.shape[1]}")
 
-    # Hold out a test split and preserve ground truth
+    # Hold out a test split and preserve ground truth.
+    # 80% train (279 patients) / 20% test (70); stratify=y keeps the same
+    # cancer/benign ratio in both; the fixed seed gives the same split every run.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=RANDOM_SEED, stratify=y
     )
@@ -81,6 +107,8 @@ def train_model(model_name: str = "rf", test_size: float = 0.2) -> Path:
     print(f"      Saved test split ({len(X_test)} samples) to evaluation/ground_truth/")
 
     print(f"\n[2/3] Constructing pipeline and fitting on {len(X_train)} samples...")
+    # Chain preprocessing (Step 2) and the model (Step 3) into one pipeline,
+    # so the medians/means/stds are learned from training patients only
     preprocessor = build_preprocessor(impute_strategy="median", scale=True)
     clf = get_model(model_name)
     full_pipeline = Pipeline(steps=[
@@ -90,6 +118,7 @@ def train_model(model_name: str = "rf", test_size: float = 0.2) -> Path:
 
     full_pipeline.fit(X_train, y_train)
 
+    # Save the trained pipeline (preprocessing + model) so evaluate/explain can reuse it
     model_path = OUTPUT_DIR / f"model_{model_name}.joblib"
     joblib.dump(full_pipeline, model_path)
     print(f"\n[3/3] Trained model artifact saved to: {model_path}")
@@ -120,7 +149,10 @@ def evaluate_model(model_name: str = "rf"):
     y_test = pd.read_csv(y_test_path).squeeze().to_numpy()
 
     print("\n[2/3] Running inference...")
+    # predict() labels a patient cancer when P(cancer) >= 0.5 (scikit-learn's
+    # default cutoff). The tuned cutoff of the proposed method is in s6_nested_cv.py.
     y_pred = pipeline.predict(X_test)
+    # Preprocessed test features, needed only for the PCA chart
     X_test_transformed = pipeline.named_steps["preprocessor"].transform(X_test)
     pca_plot = save_3d_pca_plot(
         X_test_transformed,
@@ -129,6 +161,7 @@ def evaluate_model(model_name: str = "rf"):
         model_name=model_name,
     )
     print(f"      3D PCA plot:      {pca_plot}")
+    # Column 1 of predict_proba = probability of cancer (label 1)
     y_prob = pipeline.predict_proba(X_test)[:, 1] if hasattr(pipeline, "predict_proba") else None
 
     metrics = evaluate_predictions(y_test, y_pred, y_prob)
@@ -165,8 +198,9 @@ def evaluate_model(model_name: str = "rf"):
 ###############################################################################
 #for shap remove if necessary
 def explain_model(model_name: str = "rf"):
+    """Run SHAP (Step 5) on one saved model and save its explanation charts."""
 
-    
+
     print("=" * 60)
     print(f"EXPLAIN PHASE (SHAP): {model_name.upper()}")
     print("=" * 60)
@@ -181,6 +215,7 @@ def explain_model(model_name: str = "rf"):
 
 ###############################################################################
 if __name__ == "__main__":
+    # ---- Read the command-line options (--mode and --model) ----
     parser = argparse.ArgumentParser(description="Ovarian Cancer Detection ML Pipeline")
     parser.add_argument(
         "--mode",
@@ -199,12 +234,15 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # ---- Decide which models to run ("all" = the four base models) ----
     target_models = ["rf", "hgb", "lr", "svm"]
     if args.model == "all":
         models_to_evaluate = target_models
     else:
         models_to_evaluate = [args.model]
 
+    # ---- Run the requested steps, in order ----
+    # Note: "voting" and "stacking" are skipped in train/evaluate/explain for now.
     if args.mode in ("train", "all"):
         for m in models_to_evaluate:
             if m not in ["voting", "stacking"]:
@@ -216,6 +254,7 @@ if __name__ == "__main__":
                 evaluate_model(model_name=m)
 
     # add for optimization functions
+    # Exploratory weighted vote; see the known limitations in s3_ensemble.py
     if args.mode in ("ensemble", "all"):
         print("=" * 60)
         print("RUNNING CUSTOM WEIGHTED ENSEMBLE TEST")
@@ -241,6 +280,7 @@ if __name__ == "__main__":
         )
         print(f"\n✨ Final Weighted Ensemble Decision: {final_decision}")
 
+    # Proposed method (Step 6): nested cross-validation with a tuned cutoff
     if args.mode == "nested":
         run_nested_cv(models_to_evaluate)
 

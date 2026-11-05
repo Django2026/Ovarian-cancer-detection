@@ -15,6 +15,11 @@ Test patients are never used to choose settings or tau, so the scores are not
 optimistically biased. Results are averaged over the K_OUTER folds.
 
 Labels follow s1_load.py: 1 = ovarian cancer (positive class), 0 = benign.
+
+Input : the raw data (via s1_load.py); preprocessing from s2, models from s3.
+Output: evaluation/results/nested_cv_per_fold.csv (one row per model per fold)
+        and evaluation/results/nested_cv_summary.csv (mean and std per model).
+Called by: main.py (--mode nested). No models are saved; only the scores.
 """
 import json
 from typing import Dict, List
