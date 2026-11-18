@@ -58,6 +58,7 @@ from src.s5_shap import (
 )
 
 from src.s6_nested_cv import run_all as run_nested_cv
+from src.s7_evaluation import run_evaluation
 
 
 # Where the held-out test patients and their true labels are saved
@@ -221,7 +222,7 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="all",
-        choices=["train", "evaluate", "ensemble", "explain","nested", "all"],
+        choices=["train", "evaluate", "ensemble", "explain","nested","experiment", "all"],
         #added explain to the choices for shap
         help="Action to perform: 'train', 'evaluate', 'ensemble', 'explain', or 'all' (default)",
     )
@@ -283,6 +284,9 @@ if __name__ == "__main__":
     # Proposed method (Step 6): nested cross-validation with a tuned cutoff
     if args.mode == "nested":
         run_nested_cv(models_to_evaluate)
+    # Milestone 4 evaluation (Step 7): 80/20 dev/test protocol, RQ1-RQ3
+    if args.mode == "experiment":
+        run_evaluation()
 
     if args.mode in ("explain", "all"):
         for m in models_to_evaluate:
