@@ -32,6 +32,8 @@ conda env create -f environment.yml
 conda activate ovarian-cancer-ml
 
 ## Quick Start (from within environment; see above)
+### Milestone 4 evaluation (dev/test split, RQ1-RQ3)
+python main.py --mode experiment
 ### Run everything
 python quickstart.py
 ### Train and evaluate
@@ -56,6 +58,20 @@ Nested 5-fold cross-validation, recall floor 90% (mean over folds):
 | Gradient Boosting | 0.26 | 0.90 | 0.19 | 0.95 |
 | SVM (RBF) | 0.24 | 0.89 | 0.41 | 0.88 |
 | Logistic Regression | 0.20 | 0.88 | 0.42 | 0.87 |
+
+### Milestone 4: final test set (70 patients, used once)
+80/20 stratified dev/test split; settings and cutoff chosen by 5-fold CV on the
+development set only. Baseline = tuned model at cutoff 0.5; proposed = recall-constrained cutoff (rho = 0.90).
+
+| Model | Baseline TP / FP / F1 | Proposed TP / FP / F1 | ROC-AUC |
+|---|---|---|---|
+| Logistic Regression | 26 / 5 / 0.800 | 31 / 12 / 0.805 | 0.891 |
+| SVM (RBF) | 24 / 7 / 0.738 | 28 / 9 / 0.789 | 0.906 |
+| Random Forest | 29 / 2 / 0.892 | 30 / 2 / 0.909 | 0.946 |
+| Gradient Boosting | 29 / 2 / 0.892 | 30 / 2 / 0.909 | 0.955 |
+
+Top SHAP features (Gradient Boosting): HE4, NEU, CA125, ALB, AFP.
+Evaluation code (s7_evaluation.py) written with help of Claude; reviewed by the team.
 
 ## Citation
 Mi, W., et al. (2020). Data for: Using Machine Learning to Predict Ovarian Cancer. Mendeley Data, V11, doi:10.17632/th7fztbrv9.11.
