@@ -18,6 +18,7 @@ steps = [
     ["--mode", "evaluate", "--model", "all"],
     ["--mode", "nested", "--model", "all"],
     ["--mode", "explain", "--model", "rf"],
+    ["--mode", "experiment", "--model", "all"],
 ]
 
 for args in steps:
