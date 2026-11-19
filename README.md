@@ -70,7 +70,7 @@ development set only. Baseline = tuned model at cutoff 0.5; proposed = recall-co
 | Random Forest | 29 / 2 / 0.892 | 30 / 2 / 0.909 | 0.946 |
 | Gradient Boosting | 29 / 2 / 0.892 | 30 / 2 / 0.909 | 0.955 |
 
-Top SHAP features (Gradient Boosting): HE4, NEU, CA125, ALB, AFP.
+SHAP shows how each feature pushed a patient's predicted probability of cancer up or down. Top SHAP features (Gradient Boosting): HE4, NEU, CA125, ALB, AFP.
 Evaluation code (s7_evaluation.py) written with help of Claude; reviewed by the team.
 
 ## Citation
